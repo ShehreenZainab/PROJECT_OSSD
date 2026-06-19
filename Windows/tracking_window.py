@@ -1,3 +1,10 @@
+"""
+TeddyShine Laundry Management System - Tracking Window Module
+Color Theme: Light Greenish-Gray (#E8F0E6 background style)
+Module: tracking_window.py
+Purpose: Track laundry items through process stages
+"""
+
 import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import datetime
@@ -8,8 +15,15 @@ from helpers import (
     show_error, show_success, show_confirm, center_window,
     format_datetime, safe_int, get_current_datetime
 )
+
+
 class TrackingWindow(tk.Frame):
-# Modern color theme
+    """
+    Tracking Window - Track laundry items through process stages.
+    Provides Add, Mark Complete, Delete, and View functionality for tracking records.
+    """
+    
+    # Modern color theme
     COLORS = {
         'bg': '#E8F0E6',           # Light greenish-gray background
         'card_bg': '#FFFFFF',       # White for cards
@@ -34,26 +48,33 @@ class TrackingWindow(tk.Frame):
         'pending_bg': '#F3E5F5',     # Light purple for pending rows
         'pending_fg': '#4A148C'      # Dark purple text
     }
-# Status options
+    
+    # Status options
     STATUS_OPTIONS = ['Pending', 'InProgress', 'Completed', 'Failed']
+    
     def __init__(self, parent, go_back_callback):
-super().__init__(parent, bg=self.COLORS['bg'])
+        """Initialize the Tracking Window."""
+        super().__init__(parent, bg=self.COLORS['bg'])
         self.parent = parent
         self.go_back_callback = go_back_callback
         self.current_tracking_id = None
-# Configure grid weights
+        
+        # Configure grid weights
         self.grid_rowconfigure(0, weight=0)  # Header
         self.grid_rowconfigure(1, weight=1)  # Main content
         self.grid_columnconfigure(0, weight=1)
-# Create UI sections
+        
+        # Create UI sections
         self.create_header()
         self.create_main_content()
-# Load data
+        
+        # Load data
         self.load_orders()
         self.load_process_stages()
         self.load_staff()
         self.load_tracking()
-def create_header(self):
+        
+    def create_header(self):
         """Creates the header bar with title and back button."""
         header_frame = tk.Frame(
             self,
@@ -62,11 +83,13 @@ def create_header(self):
         )
         header_frame.grid(row=0, column=0, sticky="ew")
         header_frame.grid_propagate(False)
-# Configure columns
+        
+        # Configure columns
         header_frame.grid_columnconfigure(0, weight=0)
         header_frame.grid_columnconfigure(1, weight=1)
         header_frame.grid_columnconfigure(2, weight=0)
-# Back button
+        
+        # Back button
         back_btn = tk.Button(
             header_frame,
             text="← Back to Dashboard",
@@ -81,15 +104,19 @@ def create_header(self):
             pady=8,
             command=self.go_back_callback
         )
-back_btn.grid(row=0, column=0, padx=20, pady=15, sticky='w')
-# Hover effect
+        back_btn.grid(row=0, column=0, padx=20, pady=15, sticky='w')
+        
+        # Hover effect
         def on_enter(e):
             back_btn.config(bg=self.COLORS['primary'])
+            
         def on_leave(e):
             back_btn.config(bg=self.COLORS['primary_dark'])
+            
         back_btn.bind("<Enter>", on_enter)
         back_btn.bind("<Leave>", on_leave)
-# Title
+        
+        # Title
         title_label = tk.Label(
             header_frame,
             text="Order Tracking",
@@ -98,7 +125,8 @@ back_btn.grid(row=0, column=0, padx=20, pady=15, sticky='w')
             fg=self.COLORS['text_light']
         )
         title_label.grid(row=0, column=1, padx=20, pady=15)
-# Stats label (will be updated)
+        
+        # Stats label (will be updated)
         self.stats_label = tk.Label(
             header_frame,
             text="Active Trackings: 0",
@@ -115,11 +143,14 @@ back_btn.grid(row=0, column=0, padx=20, pady=15, sticky='w')
         main_container.grid_rowconfigure(0, weight=1)
         main_container.grid_columnconfigure(0, weight=1)
         main_container.grid_columnconfigure(1, weight=2)
-# Left Panel - Form
+        
+        # Left Panel - Form
         self.create_form_panel(main_container)
-# Right Panel - Table
+        
+        # Right Panel - Table
         self.create_table_panel(main_container)
-def create_form_panel(self, parent):
+        
+    def create_form_panel(self, parent):
         """Creates the form panel for adding/editing tracking records."""
         form_frame = tk.Frame(
             parent,
@@ -129,9 +160,11 @@ def create_form_panel(self, parent):
             highlightthickness=1
         )
         form_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
-# Form title
+        
+        # Form title
         title_frame = tk.Frame(form_frame, bg=self.COLORS['header_bg'])
         title_frame.pack(fill='x', pady=(0, 15))
+        
         title_label = tk.Label(
             title_frame,
             text="📍 Tracking Information",
@@ -140,25 +173,32 @@ def create_form_panel(self, parent):
             fg=self.COLORS['primary']
         )
         title_label.pack(pady=12)
-# Scrollable form fields
+        
+        # Scrollable form fields
         canvas = tk.Canvas(form_frame, bg=self.COLORS['card_bg'], highlightthickness=0)
         scrollbar = ttk.Scrollbar(form_frame, orient="vertical", command=canvas.yview)
         scrollable_frame = tk.Frame(canvas, bg=self.COLORS['card_bg'])
+        
         scrollable_frame.bind(
             "<Configure>",
             lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
         )
+        
         canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
         canvas.configure(yscrollcommand=scrollbar.set)
+        
         canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
-# Form fields
+        
+        # Form fields
         self.create_form_fields(scrollable_frame)
+        
     def create_form_fields(self, parent):
         """Creates all form input fields."""
         fields_frame = tk.Frame(parent, bg=self.COLORS['card_bg'])
         fields_frame.pack(fill='both', padx=25, pady=20)
-# Order Selection
+        
+        # Order Selection
         tk.Label(
             fields_frame,
             text="Order *:",
@@ -166,14 +206,16 @@ def create_form_panel(self, parent):
             bg=self.COLORS['card_bg'],
             fg=self.COLORS['text']
         ).grid(row=0, column=0, sticky='w', pady=(0, 5))
-self.order_combo = ttk.Combobox(
+        
+        self.order_combo = ttk.Combobox(
             fields_frame,
             font=('Helvetica', 11),
             state='readonly',
             width=35
         )
         self.order_combo.grid(row=1, column=0, columnspan=2, sticky='ew', pady=(0, 15), ipady=5)
-# Process Stage Selection
+        
+        # Process Stage Selection
         tk.Label(
             fields_frame,
             text="Process Stage *:",
@@ -189,7 +231,8 @@ self.order_combo = ttk.Combobox(
             width=35
         )
         self.stage_combo.grid(row=3, column=0, columnspan=2, sticky='ew', pady=(0, 15), ipady=5)
-# Staff Assignment
+        
+        # Staff Assignment
         tk.Label(
             fields_frame,
             text="Assigned Staff:",
@@ -197,14 +240,16 @@ self.order_combo = ttk.Combobox(
             bg=self.COLORS['card_bg'],
             fg=self.COLORS['text']
         ).grid(row=4, column=0, sticky='w', pady=(0, 5))
-self.staff_combo = ttk.Combobox(
+        
+        self.staff_combo = ttk.Combobox(
             fields_frame,
             font=('Helvetica', 11),
             state='readonly',
             width=35
         )
         self.staff_combo.grid(row=5, column=0, columnspan=2, sticky='ew', pady=(0, 15), ipady=5)
-# Start Time
+        
+        # Start Time
         tk.Label(
             fields_frame,
             text="Start Time *:",
@@ -215,7 +260,8 @@ self.staff_combo = ttk.Combobox(
         
         time_frame = tk.Frame(fields_frame, bg=self.COLORS['card_bg'])
         time_frame.grid(row=7, column=0, columnspan=2, sticky='ew', pady=(0, 15))
-self.start_time_entry = tk.Entry(
+        
+        self.start_time_entry = tk.Entry(
             time_frame,
             font=('Helvetica', 11),
             bg='#FAFAFA',
@@ -224,7 +270,8 @@ self.start_time_entry = tk.Entry(
             width=25
         )
         self.start_time_entry.pack(side='left', ipady=5)
-tk.Button(
+        
+        tk.Button(
             time_frame,
             text="📅 Now",
             font=('Helvetica', 9),
@@ -235,7 +282,8 @@ tk.Button(
             padx=10,
             command=self.set_start_time_now
         ).pack(side='left', padx=(10, 0))
-# End Time
+        
+        # End Time
         tk.Label(
             fields_frame,
             text="End Time:",
@@ -253,7 +301,8 @@ tk.Button(
             width=35
         )
         self.end_time_entry.grid(row=9, column=0, columnspan=2, sticky='ew', pady=(0, 15), ipady=5)
-# Status
+        
+        # Status
         tk.Label(
             fields_frame,
             text="Status:",
@@ -271,7 +320,8 @@ tk.Button(
         )
         self.status_combo.grid(row=11, column=0, columnspan=2, sticky='ew', pady=(0, 15), ipady=5)
         self.status_combo.set('Pending')
-# Notes
+        
+        # Notes
         tk.Label(
             fields_frame,
             text="Notes:",
@@ -290,7 +340,8 @@ tk.Button(
             width=40
         )
         self.notes_text.grid(row=13, column=0, columnspan=2, sticky='ew', pady=(0, 15))
-# Required fields hint
+        
+        # Required fields hint
         hint_label = tk.Label(
             fields_frame,
             text="* Required fields",
@@ -299,9 +350,11 @@ tk.Button(
             fg=self.COLORS['text_secondary']
         )
         hint_label.grid(row=14, column=0, columnspan=2, sticky='w', pady=(5, 10))
-# Buttons
+        
+        # Buttons
         self.create_form_buttons(fields_frame)
-# Configure grid weights
+        
+        # Configure grid weights
         fields_frame.grid_columnconfigure(0, weight=1)
         fields_frame.grid_columnconfigure(1, weight=0)
         
@@ -309,10 +362,12 @@ tk.Button(
         """Creates the form action buttons."""
         button_frame = tk.Frame(parent, bg=self.COLORS['card_bg'])
         button_frame.grid(row=15, column=0, columnspan=2, sticky='ew', pady=(10, 0))
-# Configure grid for buttons
+        
+        # Configure grid for buttons
         button_frame.grid_columnconfigure(0, weight=1)
         button_frame.grid_columnconfigure(1, weight=1)
-# Add Button
+        
+        # Add Button
         self.add_btn = tk.Button(
             button_frame,
             text="➕ Add Tracking",
@@ -328,7 +383,8 @@ tk.Button(
             command=self.add_tracking
         )
         self.add_btn.grid(row=0, column=0, padx=5, pady=5, sticky='ew')
-# Mark Complete Button
+        
+        # Mark Complete Button
         self.complete_btn = tk.Button(
             button_frame,
             text="✅ Mark Complete",
@@ -345,7 +401,8 @@ tk.Button(
             command=self.mark_complete
         )
         self.complete_btn.grid(row=0, column=1, padx=5, pady=5, sticky='ew')
-# Delete & Clear buttons row
+        
+        # Delete & Clear buttons row
         self.delete_btn = tk.Button(
             button_frame,
             text="🗑️ Delete Tracking",
@@ -378,9 +435,11 @@ tk.Button(
             command=self.clear_form
         )
         self.clear_btn.grid(row=1, column=1, padx=5, pady=(10, 0), sticky='ew')
-# Hover effects
+        
+        # Hover effects
         def on_enter(btn, color):
             btn.config(bg=color)
+            
         def on_leave(btn, original_color):
             btn.config(bg=original_color)
             
@@ -392,6 +451,7 @@ tk.Button(
         self.delete_btn.bind("<Leave>", lambda e: on_leave(self.delete_btn, self.COLORS['danger']))
         self.clear_btn.bind("<Enter>", lambda e: on_enter(self.clear_btn, '#FB8C00'))
         self.clear_btn.bind("<Leave>", lambda e: on_leave(self.clear_btn, self.COLORS['warning']))
+        
     def create_table_panel(self, parent):
         """Creates the table panel for displaying tracking records."""
         table_frame = tk.Frame(
@@ -402,7 +462,8 @@ tk.Button(
             highlightthickness=1
         )
         table_frame.grid(row=0, column=1, sticky="nsew", padx=(10, 0))
-# Table title
+        
+        # Table title
         title_frame = tk.Frame(table_frame, bg=self.COLORS['header_bg'])
         title_frame.pack(fill='x', pady=(0, 10))
         
@@ -917,5 +978,3 @@ tk.Button(
         
         # Clear treeview selection
         self.tree.selection_remove(self.tree.selection())
-
-
