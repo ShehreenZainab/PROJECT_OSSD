@@ -9,9 +9,9 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import datetime
 
-from database import get_connection, close_connection
-from auth import is_admin, get_current_user
-from helpers import (
+from database.database import get_connection, close_connection
+from utils.auth import is_admin, get_current_user
+from utils.helpers import (
     show_error, show_success, show_confirm, center_window,
     format_datetime, safe_int, get_current_datetime
 )

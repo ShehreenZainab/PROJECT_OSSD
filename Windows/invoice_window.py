@@ -5,13 +5,18 @@ Module: invoice_window.py
 Purpose: Generate and view invoices for orders
 """
 
+import sys
+import os
+# Add parent directory to path so imports work when running this file directly
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import datetime, timedelta
 
-from database import get_connection, close_connection
-from auth import get_current_user
-from helpers import (
+from database.database import get_connection, close_connection
+from utils.auth import get_current_user
+from utils.helpers import (
     show_error, show_success, show_confirm, center_window,
     format_date, format_currency, safe_float, safe_int,
     get_current_date, get_current_datetime
@@ -847,4 +852,394 @@ class InvoiceWindow(tk.Frame):
             
             show_success(f"Receipt {receipt_number} printed successfully!")
             
-        except Exception
+        except Exception as e:
+            print(f"[InvoiceWindow] Error printing receipt: {e}")
+            show_error(f"Failed to print receipt: {str(e)}")
+        finally:
+            close_connection(conn)
+            
+    def show_receipt_popup(self, invoice, receipt_number):
+        """Shows a popup window with receipt details."""
+        receipt_window = tk.Toplevel(self)
+        receipt_window.title(f"Receipt - {receipt_number}")
+        receipt_window.geometry("450x650")
+        receipt_window.configure(bg=self.COLORS['bg'])
+        center_window(receipt_window, 450, 650)
+        
+        # Make window non-resizable
+        receipt_window.resizable(False, False)
+        
+        # Main frame
+        main_frame = tk.Frame(receipt_window, bg=self.COLORS['card_bg'])
+        main_frame.pack(fill='both', expand=True, padx=20, pady=20)
+        
+        # Header
+        tk.Label(
+            main_frame,
+            text="TEDDYSHINE LAUNDRY",
+            font=('Helvetica', 16, 'bold'),
+            bg=self.COLORS['card_bg'],
+            fg=self.COLORS['primary']
+        ).pack(pady=(10, 5))
+        
+        tk.Label(
+            main_frame,
+            text="Laundry Management System",
+            font=('Helvetica', 10),
+            bg=self.COLORS['card_bg'],
+            fg=self.COLORS['text_secondary']
+        ).pack()
+        
+        tk.Label(
+            main_frame,
+            text="=" * 45,
+            font=('Helvetica', 9),
+            bg=self.COLORS['card_bg']
+        ).pack(pady=10)
+        
+        # Receipt info
+        tk.Label(
+            main_frame,
+            text=f"Receipt No: {receipt_number}",
+            font=('Helvetica', 10, 'bold'),
+            bg=self.COLORS['card_bg']
+        ).pack()
+        
+        # Format date safely
+        current_time = get_current_datetime()
+        if current_time:
+            try:
+                dt_obj = datetime.strptime(current_time, "%Y-%m-%d %H:%M:%S")
+                formatted_time = dt_obj.strftime("%d %b %Y %I:%M %p")
+            except:
+                formatted_time = current_time
+        else:
+            formatted_time = "N/A"
+            
+        tk.Label(
+            main_frame,
+            text=f"Date: {formatted_time}",
+            font=('Helvetica', 9),
+            bg=self.COLORS['card_bg']
+        ).pack(pady=(5, 10))
+        
+        tk.Label(
+            main_frame,
+            text="-" * 45,
+            font=('Helvetica', 9),
+            bg=self.COLORS['card_bg']
+        ).pack()
+        
+        # Order Details
+        details_frame = tk.Frame(main_frame, bg=self.COLORS['card_bg'])
+        details_frame.pack(fill='x', pady=10)
+        
+        tk.Label(details_frame, text=f"Invoice No:", font=('Helvetica', 10, 'bold'),
+                bg=self.COLORS['card_bg']).grid(row=0, column=0, sticky='w')
+        tk.Label(details_frame, text=invoice['invoice_number'], font=('Helvetica', 10),
+                bg=self.COLORS['card_bg']).grid(row=0, column=1, sticky='w', padx=(10, 0))
+        
+        tk.Label(details_frame, text=f"Order No:", font=('Helvetica', 10, 'bold'),
+                bg=self.COLORS['card_bg']).grid(row=1, column=0, sticky='w', pady=(5, 0))
+        tk.Label(details_frame, text=invoice['order_number'], font=('Helvetica', 10),
+                bg=self.COLORS['card_bg']).grid(row=1, column=1, sticky='w', padx=(10, 0), pady=(5, 0))
+        
+        tk.Label(details_frame, text=f"Resident:", font=('Helvetica', 10, 'bold'),
+                bg=self.COLORS['card_bg']).grid(row=2, column=0, sticky='w', pady=(5, 0))
+        tk.Label(details_frame, text=invoice['full_name'], font=('Helvetica', 10),
+                bg=self.COLORS['card_bg']).grid(row=2, column=1, sticky='w', padx=(10, 0), pady=(5, 0))
+        
+        tk.Label(details_frame, text=f"Phone:", font=('Helvetica', 10, 'bold'),
+                bg=self.COLORS['card_bg']).grid(row=3, column=0, sticky='w', pady=(5, 0))
+        tk.Label(details_frame, text=invoice['phone'], font=('Helvetica', 10),
+                bg=self.COLORS['card_bg']).grid(row=3, column=1, sticky='w', padx=(10, 0), pady=(5, 0))
+        
+        tk.Label(details_frame, text=f"Address:", font=('Helvetica', 10, 'bold'),
+                bg=self.COLORS['card_bg']).grid(row=4, column=0, sticky='w', pady=(5, 0))
+        tk.Label(details_frame, text=f"Block {invoice['block_name']}, Room {invoice['room_number']}",
+                font=('Helvetica', 10), bg=self.COLORS['card_bg']).grid(row=4, column=1, sticky='w', padx=(10, 0), pady=(5, 0))
+        
+        tk.Label(
+            main_frame,
+            text="-" * 45,
+            font=('Helvetica', 9),
+            bg=self.COLORS['card_bg']
+        ).pack(pady=10)
+        
+        # Amount Summary
+        amount_frame = tk.Frame(main_frame, bg=self.COLORS['card_bg'])
+        amount_frame.pack(fill='x', pady=5)
+        
+        tk.Label(amount_frame, text=f"Subtotal:", font=('Helvetica', 10),
+                bg=self.COLORS['card_bg']).grid(row=0, column=0, sticky='w')
+        tk.Label(amount_frame, text=format_currency(invoice['subtotal']), font=('Helvetica', 10),
+                bg=self.COLORS['card_bg']).grid(row=0, column=1, sticky='e', padx=(20, 0))
+        
+        if invoice['discount_amount'] > 0:
+            tk.Label(amount_frame, text=f"Discount:", font=('Helvetica', 10),
+                    bg=self.COLORS['card_bg']).grid(row=1, column=0, sticky='w', pady=(5, 0))
+            tk.Label(amount_frame, text=f"- {format_currency(invoice['discount_amount'])}",
+                    font=('Helvetica', 10), bg=self.COLORS['card_bg'], fg=self.COLORS['danger']
+                    ).grid(row=1, column=1, sticky='e', padx=(20, 0), pady=(5, 0))
+        
+        tk.Label(
+            main_frame,
+            text="-" * 45,
+            font=('Helvetica', 9),
+            bg=self.COLORS['card_bg']
+        ).pack(pady=5)
+        
+        tk.Label(amount_frame, text=f"TOTAL:", font=('Helvetica', 12, 'bold'),
+                bg=self.COLORS['card_bg'], fg=self.COLORS['primary']).grid(row=2, column=0, sticky='w', pady=(10, 0))
+        tk.Label(amount_frame, text=format_currency(invoice['total_amount']),
+                font=('Helvetica', 12, 'bold'), bg=self.COLORS['card_bg'], fg=self.COLORS['primary']
+                ).grid(row=2, column=1, sticky='e', padx=(20, 0), pady=(10, 0))
+        
+        # Payment Status
+        tk.Label(
+            main_frame,
+            text="=" * 45,
+            font=('Helvetica', 9),
+            bg=self.COLORS['card_bg']
+        ).pack(pady=10)
+        
+        tk.Label(
+            main_frame,
+            text=f"Amount Paid: {format_currency(invoice['amount_paid'])}",
+            font=('Helvetica', 10, 'bold'),
+            bg=self.COLORS['card_bg'],
+            fg=self.COLORS['success']
+        ).pack()
+        
+        tk.Label(
+            main_frame,
+            text=f"Balance Due: {format_currency(invoice['balance_due'])}",
+            font=('Helvetica', 10, 'bold'),
+            bg=self.COLORS['card_bg'],
+            fg=self.COLORS['danger'] if invoice['balance_due'] > 0 else self.COLORS['success']
+        ).pack(pady=(5, 10))
+        
+        tk.Label(
+            main_frame,
+            text=f"Status: {invoice['status']}",
+            font=('Helvetica', 10),
+            bg=self.COLORS['card_bg']
+        ).pack()
+        
+        tk.Label(
+            main_frame,
+            text="=" * 45,
+            font=('Helvetica', 9),
+            bg=self.COLORS['card_bg']
+        ).pack(pady=10)
+        
+        tk.Label(
+            main_frame,
+            text="Thank you for your business!",
+            font=('Helvetica', 9, 'italic'),
+            bg=self.COLORS['card_bg'],
+            fg=self.COLORS['text_secondary']
+        ).pack()
+        
+        # Close button
+        close_btn = tk.Button(
+            main_frame,
+            text="Close",
+            font=('Helvetica', 11, 'bold'),
+            bg=self.COLORS['primary'],
+            fg='white',
+            relief='flat',
+            cursor='hand2',
+            padx=20,
+            pady=8,
+            command=receipt_window.destroy
+        )
+        close_btn.pack(pady=(15, 10))
+        
+    def view_invoice_details(self):
+        """Shows detailed information about the selected invoice."""
+        selected = self.invoice_tree.selection()
+        if not selected:
+            show_error("Please select an invoice to view details")
+            return
+            
+        values = self.invoice_tree.item(selected[0], 'values')
+        if not values:
+            return
+            
+        invoice_id = safe_int(values[0])
+        
+        conn = get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT i.*, o.order_number, o.order_date, o.expected_delivery_date,
+                       r.full_name, r.phone, r.email, r.block_name, r.room_number
+                FROM Invoice i
+                JOIN Orders o ON i.order_id = o.order_id
+                JOIN Resident r ON o.resident_id = r.resident_id
+                WHERE i.invoice_id = ?
+            """, (invoice_id,))
+            invoice = cursor.fetchone()
+            
+            if invoice:
+                self.show_invoice_details_dialog(invoice)
+                
+        except Exception as e:
+            print(f"[InvoiceWindow] Error fetching invoice details: {e}")
+            show_error("Failed to fetch invoice details")
+        finally:
+            close_connection(conn)
+            
+    def show_invoice_details_dialog(self, invoice):
+        """Shows a dialog with detailed invoice information."""
+        details_window = tk.Toplevel(self)
+        details_window.title(f"Invoice Details - {invoice['invoice_number']}")
+        details_window.geometry("500x550")
+        details_window.configure(bg=self.COLORS['bg'])
+        center_window(details_window, 500, 550)
+        
+        # Main frame
+        main_frame = tk.Frame(details_window, bg=self.COLORS['card_bg'])
+        main_frame.pack(fill='both', expand=True, padx=20, pady=20)
+        
+        # Scrollable frame
+        canvas = tk.Canvas(main_frame, bg=self.COLORS['card_bg'], highlightthickness=0)
+        scrollbar = ttk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = tk.Frame(canvas, bg=self.COLORS['card_bg'])
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        # Header
+        tk.Label(
+            scrollable_frame,
+            text="INVOICE DETAILS",
+            font=('Helvetica', 16, 'bold'),
+            bg=self.COLORS['card_bg'],
+            fg=self.COLORS['primary']
+        ).pack(pady=(10, 15))
+        
+        # Invoice Information
+        info_frame = tk.LabelFrame(scrollable_frame, text="Invoice Information",
+                                   font=('Helvetica', 11, 'bold'),
+                                   bg=self.COLORS['card_bg'], fg=self.COLORS['primary'],
+                                   padx=10, pady=10)
+        info_frame.pack(fill='x', padx=10, pady=10)
+        
+        # Format dates safely
+        generated_date = invoice['generated_date']
+        if generated_date:
+            try:
+                dt_obj = datetime.strptime(generated_date, "%Y-%m-%d %H:%M:%S")
+                gen_date = dt_obj.strftime("%d %b %Y %I:%M %p")
+            except:
+                gen_date = generated_date
+        else:
+            gen_date = "N/A"
+            
+        due_date = invoice['due_date']
+        if due_date:
+            try:
+                dt_obj = datetime.strptime(due_date, "%Y-%m-%d")
+                due = dt_obj.strftime("%d %b %Y")
+            except:
+                due = due_date
+        else:
+            due = "N/A"
+            
+        paid_date = invoice['paid_date']
+        if paid_date:
+            try:
+                dt_obj = datetime.strptime(paid_date, "%Y-%m-%d %H:%M:%S")
+                paid = dt_obj.strftime("%d %b %Y %I:%M %p")
+            except:
+                paid = paid_date
+        else:
+            paid = "Not paid yet"
+            
+        info_text = f"""
+Invoice Number: {invoice['invoice_number']}
+Status: {invoice['status']}
+Generated Date: {gen_date}
+Due Date: {due}
+Paid Date: {paid}
+        """
+        
+        tk.Label(info_frame, text=info_text, font=('Helvetica', 10),
+                bg=self.COLORS['card_bg'], justify='left').pack(anchor='w')
+        
+        # Order Information
+        order_frame = tk.LabelFrame(scrollable_frame, text="Order Information",
+                                    font=('Helvetica', 11, 'bold'),
+                                    bg=self.COLORS['card_bg'], fg=self.COLORS['primary'],
+                                    padx=10, pady=10)
+        order_frame.pack(fill='x', padx=10, pady=10)
+        
+        order_text = f"""
+Order Number: {invoice['order_number']}
+Order Date: {format_date(invoice['order_date'])}
+Expected Delivery: {format_date(invoice['expected_delivery_date'])}
+        """
+        
+        tk.Label(order_frame, text=order_text, font=('Helvetica', 10),
+                bg=self.COLORS['card_bg'], justify='left').pack(anchor='w')
+        
+        # Resident Information
+        resident_frame = tk.LabelFrame(scrollable_frame, text="Resident Information",
+                                       font=('Helvetica', 11, 'bold'),
+                                       bg=self.COLORS['card_bg'], fg=self.COLORS['primary'],
+                                       padx=10, pady=10)
+        resident_frame.pack(fill='x', padx=10, pady=10)
+        
+        resident_text = f"""
+Name: {invoice['full_name']}
+Phone: {invoice['phone']}
+Email: {invoice['email']}
+Address: Block {invoice['block_name']}, Room {invoice['room_number']}
+        """
+        
+        tk.Label(resident_frame, text=resident_text, font=('Helvetica', 10),
+                bg=self.COLORS['card_bg'], justify='left').pack(anchor='w')
+        
+        # Amount Summary
+        amount_frame = tk.LabelFrame(scrollable_frame, text="Amount Summary",
+                                     font=('Helvetica', 11, 'bold'),
+                                     bg=self.COLORS['card_bg'], fg=self.COLORS['primary'],
+                                     padx=10, pady=10)
+        amount_frame.pack(fill='x', padx=10, pady=10)
+        
+        amount_text = f"""
+Subtotal: {format_currency(invoice['subtotal'])}
+Discount: {format_currency(invoice['discount_amount'])}
+Total Amount: {format_currency(invoice['total_amount'])}
+Amount Paid: {format_currency(invoice['amount_paid'])}
+Balance Due: {format_currency(invoice['balance_due'])}
+        """
+        
+        tk.Label(amount_frame, text=amount_text, font=('Helvetica', 10),
+                bg=self.COLORS['card_bg'], justify='left').pack(anchor='w')
+        
+        # Close button
+        close_btn = tk.Button(
+            scrollable_frame,
+            text="Close",
+            font=('Helvetica', 11, 'bold'),
+            bg=self.COLORS['primary'],
+            fg='white',
+            relief='flat',
+            cursor='hand2',
+            padx=20,
+            pady=8,
+            command=details_window.destroy
+        )
+        close_btn.pack(pady=20)
+

@@ -1,53 +1,70 @@
+"""
+TeddyShine Laundry Management System - Residents Window Module
+Color Theme: Light Greenish-Gray (#E8F0E6 background style)
+Module: residents_window.py
+Purpose: Full CRUD operations for Resident management
+"""
+
 import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import datetime
 
-from database import get_connection, close_connection
-from auth import is_admin, get_current_user
-from helpers import (
+from database.database import get_connection, close_connection
+from utils.auth import is_admin, get_current_user
+from utils.helpers import (
     show_error, show_success, show_confirm, center_window,
     validate_email, validate_phone, clear_frame, safe_int
 )
 
+
 class ResidentsWindow(tk.Frame):
     """
-    Residents Window - Manage all resident profiles."""
+    Residents Window - Manage all resident profiles.
+    Provides Add, Update, Delete, and View functionality.
+    """
     
-
+    # Modern color theme
     COLORS = {
-        'bg': '#E8F0E6',          
-        'card_bg': '#FFFFFF',      
-        'primary': '#2E7D32',      
-        'primary_dark': '#1B5E20',  
-        'primary_light': '#4CAF50',
-        'accent': '#81C784',        
-        'text': '#1B5E20',          
-        'text_secondary': '#555555', 
-        'text_light': '#FFFFFF',   
-        'border': '#C8E6C9',     
-        'danger': '#F44336',      
-        'danger_dark': '#D32F2F',   
-        'warning': '#FF9800',       
-        'success': '#4CAF50',       
-        'header_bg': '#F5F9F4'      
+        'bg': '#E8F0E6',           # Light greenish-gray background
+        'card_bg': '#FFFFFF',       # White for cards
+        'primary': '#2E7D32',       # Dark green
+        'primary_dark': '#1B5E20',  # Darker green for hover
+        'primary_light': '#4CAF50', # Light green
+        'accent': '#81C784',        # Soft green accent
+        'text': '#1B5E20',          # Dark green text
+        'text_secondary': '#555555', # Secondary text
+        'text_light': '#FFFFFF',    # Light text for buttons
+        'border': '#C8E6C9',        # Light green border
+        'danger': '#F44336',        # Danger red
+        'danger_dark': '#D32F2F',   # Darker red
+        'warning': '#FF9800',       # Warning orange
+        'success': '#4CAF50',       # Success green
+        'header_bg': '#F5F9F4'      # Light header background
     }
     
     def __init__(self, parent, go_back_callback):
-
+        """
+        Initialize the Residents Window.
+        
+        Args:
+            parent: The parent window (tk.Tk or tk.Frame)
+            go_back_callback: Function to call when back button is clicked
+        """
         super().__init__(parent, bg=self.COLORS['bg'])
         self.parent = parent
         self.go_back_callback = go_back_callback
         self.current_resident_id = None
         
         # Configure grid weights
-        self.grid_rowconfigure(0, weight=0)  
-        self.grid_rowconfigure(1, weight=1) 
+        self.grid_rowconfigure(0, weight=0)  # Header
+        self.grid_rowconfigure(1, weight=1)  # Main content
         self.grid_columnconfigure(0, weight=1)
         
+        # Create UI sections
         self.create_header()
         self.create_main_content()
         
-
+        # Load residents data
         self.load_residents()
         
     def create_header(self):
@@ -60,12 +77,12 @@ class ResidentsWindow(tk.Frame):
         header_frame.grid(row=0, column=0, sticky="ew")
         header_frame.grid_propagate(False)
         
-
+        # Configure columns
         header_frame.grid_columnconfigure(0, weight=0)  # Back button
         header_frame.grid_columnconfigure(1, weight=1)  # Title
         header_frame.grid_columnconfigure(2, weight=0)  # Stats
         
-
+        # Back button
         back_btn = tk.Button(
             header_frame,
             text="← Back to Dashboard",
@@ -92,7 +109,7 @@ class ResidentsWindow(tk.Frame):
         back_btn.bind("<Enter>", on_enter)
         back_btn.bind("<Leave>", on_leave)
         
-        
+        # Title
         title_label = tk.Label(
             header_frame,
             text="Resident Management",
@@ -102,7 +119,7 @@ class ResidentsWindow(tk.Frame):
         )
         title_label.grid(row=0, column=1, padx=20, pady=15)
         
-        # Stats label 
+        # Stats label (will be updated)
         self.stats_label = tk.Label(
             header_frame,
             text="Total Residents: 0",
@@ -117,12 +134,13 @@ class ResidentsWindow(tk.Frame):
         main_container = tk.Frame(self, bg=self.COLORS['bg'])
         main_container.grid(row=1, column=0, sticky="nsew", padx=20, pady=20)
         main_container.grid_rowconfigure(0, weight=1)
-        main_container.grid_columnconfigure(0, weight=1)
-        main_container.grid_columnconfigure(1, weight=2)
+        main_container.grid_columnconfigure(0, weight=1)  # Left panel (form)
+        main_container.grid_columnconfigure(1, weight=2)  # Right panel (table)
         
-  
+        # Left Panel - Form
         self.create_form_panel(main_container)
         
+        # Right Panel - Table
         self.create_table_panel(main_container)
         
     def create_form_panel(self, parent):
@@ -136,8 +154,9 @@ class ResidentsWindow(tk.Frame):
         )
         form_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
         
+        # Form title
         title_frame = tk.Frame(form_frame, bg=self.COLORS['header_bg'])
-        title_frame.pack(fill='x', pady=(0, 15))
+        title_frame.pack(fill='x', pady=(0, 10))
         
         title_label = tk.Label(
             title_frame,
@@ -146,97 +165,155 @@ class ResidentsWindow(tk.Frame):
             bg=self.COLORS['header_bg'],
             fg=self.COLORS['primary']
         )
-        title_label.pack(pady=12)
+        title_label.pack(pady=10)
         
-        # Form fields container (scrollable)
-        canvas = tk.Canvas(form_frame, bg=self.COLORS['card_bg'], highlightthickness=0)
-        scrollbar = ttk.Scrollbar(form_frame, orient="vertical", command=canvas.yview)
-        scrollable_frame = tk.Frame(canvas, bg=self.COLORS['card_bg'])
+        # Form fields container - using grid for better alignment
+        fields_frame = tk.Frame(form_frame, bg=self.COLORS['card_bg'])
+        fields_frame.pack(fill='both', padx=15, pady=10)
         
-        scrollable_frame.bind(
-            "<Configure>",
-            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
-        )
-        
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
-        
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
-        
-
-        self.create_form_fields(scrollable_frame)
+        # Create form fields with proper grid layout
+        self.create_form_fields(fields_frame)
         
     def create_form_fields(self, parent):
-        """Creates all form input fields."""
-        fields_frame = tk.Frame(parent, bg=self.COLORS['card_bg'])
-        fields_frame.pack(fill='both', padx=20, pady=15)
+        """Creates all form input fields with proper alignment."""
+        # Use grid with consistent column weights
+        parent.grid_columnconfigure(0, weight=1)
+        parent.grid_columnconfigure(1, weight=1)
         
-        # Column configuration for 2-column layout
-        fields_frame.grid_columnconfigure(0, weight=1)
-        fields_frame.grid_columnconfigure(1, weight=1)
+        # Row 0: First Name & Last Name
+        tk.Label(
+            parent,
+            text="First Name *:",
+            font=('Helvetica', 10, 'bold'),
+            bg=self.COLORS['card_bg'],
+            fg=self.COLORS['text']
+        ).grid(row=0, column=0, sticky='w', pady=(5, 2))
         
-        # Field definitions: (label, variable, row, column, width)
-        self.form_vars = {}
-        fields = [
-
-            ("First Name", "first_name", 0, 0, 20, True),
-            ("Last Name", "last_name", 0, 1, 20, True),
-            
-
-            ("Phone Number", "phone", 1, 0, 20, True),
-            ("Email", "email", 1, 1, 20, True),
-            
-
-            ("Block", "block_name", 2, 0, 10, True),
-            ("Room Number", "room_number", 2, 1, 10, True),
-        ]
+        self.first_name_var = tk.StringVar()
+        self.first_name_entry = tk.Entry(
+            parent,
+            textvariable=self.first_name_var,
+            font=('Helvetica', 10),
+            bg='#FAFAFA',
+            relief='solid',
+            bd=1
+        )
+        self.first_name_entry.grid(row=1, column=0, sticky='ew', padx=(0, 5), pady=(0, 10), ipady=5)
         
-        for field in fields:
-            label_text, var_name, row, col, width, required = field
-            
-            required_mark = "*" if required else ""
-            label = tk.Label(
-                fields_frame,
-                text=f"{label_text}{required_mark}:",
-                font=('Helvetica', 10, 'bold'),
-                bg=self.COLORS['card_bg'],
-                fg=self.COLORS['text']
-            )
-            label.grid(row=row, column=col, sticky='w', padx=(0, 10), pady=(10, 5))
-            
-
-            var = tk.StringVar()
-            entry = tk.Entry(
-                fields_frame,
-                textvariable=var,
-                font=('Helvetica', 10),
-                bg='#FAFAFA',
-                relief='solid',
-                bd=1,
-                highlightthickness=1,
-                highlightcolor=self.COLORS['primary']
-            )
-            entry.grid(row=row + 1, column=col, sticky='ew', padx=(0, 10), pady=(0, 5), ipady=6)
-            entry.config(width=width)
-            
-            self.form_vars[var_name] = var
-            
-            
-        address_label = tk.Label(
-            fields_frame,
+        tk.Label(
+            parent,
+            text="Last Name *:",
+            font=('Helvetica', 10, 'bold'),
+            bg=self.COLORS['card_bg'],
+            fg=self.COLORS['text']
+        ).grid(row=0, column=1, sticky='w', pady=(5, 2))
+        
+        self.last_name_var = tk.StringVar()
+        self.last_name_entry = tk.Entry(
+            parent,
+            textvariable=self.last_name_var,
+            font=('Helvetica', 10),
+            bg='#FAFAFA',
+            relief='solid',
+            bd=1
+        )
+        self.last_name_entry.grid(row=1, column=1, sticky='ew', padx=(5, 0), pady=(0, 10), ipady=5)
+        
+        # Row 2: Phone & Email
+        tk.Label(
+            parent,
+            text="Phone Number *:",
+            font=('Helvetica', 10, 'bold'),
+            bg=self.COLORS['card_bg'],
+            fg=self.COLORS['text']
+        ).grid(row=2, column=0, sticky='w', pady=(5, 2))
+        
+        self.phone_var = tk.StringVar()
+        self.phone_entry = tk.Entry(
+            parent,
+            textvariable=self.phone_var,
+            font=('Helvetica', 10),
+            bg='#FAFAFA',
+            relief='solid',
+            bd=1
+        )
+        self.phone_entry.grid(row=3, column=0, sticky='ew', padx=(0, 5), pady=(0, 10), ipady=5)
+        
+        tk.Label(
+            parent,
+            text="Email *:",
+            font=('Helvetica', 10, 'bold'),
+            bg=self.COLORS['card_bg'],
+            fg=self.COLORS['text']
+        ).grid(row=2, column=1, sticky='w', pady=(5, 2))
+        
+        self.email_var = tk.StringVar()
+        self.email_entry = tk.Entry(
+            parent,
+            textvariable=self.email_var,
+            font=('Helvetica', 10),
+            bg='#FAFAFA',
+            relief='solid',
+            bd=1
+        )
+        self.email_entry.grid(row=3, column=1, sticky='ew', padx=(5, 0), pady=(0, 10), ipady=5)
+        
+        # Row 4: Block & Room Number
+        tk.Label(
+            parent,
+            text="Block *:",
+            font=('Helvetica', 10, 'bold'),
+            bg=self.COLORS['card_bg'],
+            fg=self.COLORS['text']
+        ).grid(row=4, column=0, sticky='w', pady=(5, 2))
+        
+        self.block_var = tk.StringVar()
+        self.block_entry = tk.Entry(
+            parent,
+            textvariable=self.block_var,
+            font=('Helvetica', 10),
+            bg='#FAFAFA',
+            relief='solid',
+            bd=1,
+            width=10
+        )
+        self.block_entry.grid(row=5, column=0, sticky='w', padx=(0, 5), pady=(0, 10), ipady=5)
+        
+        tk.Label(
+            parent,
+            text="Room Number *:",
+            font=('Helvetica', 10, 'bold'),
+            bg=self.COLORS['card_bg'],
+            fg=self.COLORS['text']
+        ).grid(row=4, column=1, sticky='w', pady=(5, 2))
+        
+        self.room_var = tk.StringVar()
+        self.room_entry = tk.Entry(
+            parent,
+            textvariable=self.room_var,
+            font=('Helvetica', 10),
+            bg='#FAFAFA',
+            relief='solid',
+            bd=1,
+            width=10
+        )
+        self.room_entry.grid(row=5, column=1, sticky='w', padx=(5, 0), pady=(0, 10), ipady=5)
+        
+        # Address label
+        tk.Label(
+            parent,
             text="Address Details:",
             font=('Helvetica', 11, 'bold'),
             bg=self.COLORS['card_bg'],
             fg=self.COLORS['primary']
-        )
-        address_label.grid(row=3, column=0, columnspan=2, sticky='w', pady=(15, 5))
+        ).grid(row=6, column=0, columnspan=2, sticky='w', pady=(10, 5))
         
-
-        status_frame = tk.Frame(fields_frame, bg=self.COLORS['card_bg'])
-        status_frame.grid(row=4, column=0, columnspan=2, sticky='ew', pady=(10, 20))
+        # Status Radio Buttons
+        status_frame = tk.Frame(parent, bg=self.COLORS['card_bg'])
+        status_frame.grid(row=7, column=0, columnspan=2, sticky='w', pady=(5, 10))
         
         self.status_var = tk.StringVar(value="active")
+        
         active_radio = tk.Radiobutton(
             status_frame,
             text="Active",
@@ -246,7 +323,7 @@ class ResidentsWindow(tk.Frame):
             fg=self.COLORS['text'],
             selectcolor=self.COLORS['card_bg']
         )
-        active_radio.pack(side='left', padx=(0, 15))
+        active_radio.pack(side='left', padx=(0, 20))
         
         inactive_radio = tk.Radiobutton(
             status_frame,
@@ -259,30 +336,23 @@ class ResidentsWindow(tk.Frame):
         )
         inactive_radio.pack(side='left')
         
-        
-        hint_label = tk.Label(
-            fields_frame,
+        # Required fields hint
+        tk.Label(
+            parent,
             text="* Required fields",
             font=('Helvetica', 8, 'italic'),
             bg=self.COLORS['card_bg'],
             fg=self.COLORS['text_secondary']
-        )
-        hint_label.grid(row=5, column=0, columnspan=2, sticky='w', pady=(5, 10))
+        ).grid(row=8, column=0, columnspan=2, sticky='w', pady=(0, 10))
         
-
-        self.create_form_buttons(fields_frame)
-        
-    def create_form_buttons(self, parent):
-        """Creates the form action buttons."""
+        # Buttons
         button_frame = tk.Frame(parent, bg=self.COLORS['card_bg'])
-        button_frame.grid(row=6, column=0, columnspan=2, sticky='ew', pady=(10, 0))
-        
-
+        button_frame.grid(row=9, column=0, columnspan=2, sticky='ew', pady=(5, 0))
         button_frame.grid_columnconfigure(0, weight=1)
         button_frame.grid_columnconfigure(1, weight=1)
         button_frame.grid_columnconfigure(2, weight=1)
         
-
+        # Add Button
         self.add_btn = tk.Button(
             button_frame,
             text="➕ Add Resident",
@@ -297,9 +367,9 @@ class ResidentsWindow(tk.Frame):
             pady=8,
             command=self.add_resident
         )
-        self.add_btn.grid(row=0, column=0, padx=5, pady=5, sticky='ew')
+        self.add_btn.grid(row=0, column=0, padx=3, pady=5, sticky='ew')
         
-
+        # Update Button
         self.update_btn = tk.Button(
             button_frame,
             text="✏️ Update Resident",
@@ -315,9 +385,9 @@ class ResidentsWindow(tk.Frame):
             state='disabled',
             command=self.update_resident
         )
-        self.update_btn.grid(row=0, column=1, padx=5, pady=5, sticky='ew')
+        self.update_btn.grid(row=0, column=1, padx=3, pady=5, sticky='ew')
         
-
+        # Clear Button
         self.clear_btn = tk.Button(
             button_frame,
             text="🗑️ Clear Form",
@@ -332,19 +402,8 @@ class ResidentsWindow(tk.Frame):
             pady=8,
             command=self.clear_form
         )
-        self.clear_btn.grid(row=0, column=2, padx=5, pady=5, sticky='ew')
+        self.clear_btn.grid(row=0, column=2, padx=3, pady=5, sticky='ew')
         
-        # Hover effects
-        for btn, color in [(self.add_btn, '#45A049'), (self.update_btn, self.COLORS['primary_dark'])]:
-            def on_enter(e, b=btn, c=color):
-                b.config(bg=c)
-                
-            def on_leave(e, b=btn, orig=btn.cget('bg')):
-                b.config(bg=orig)
-                
-            btn.bind("<Enter>", on_enter)
-            btn.bind("<Leave>", on_leave)
-            
     def create_table_panel(self, parent):
         """Creates the table panel for displaying residents."""
         table_frame = tk.Frame(
@@ -356,7 +415,7 @@ class ResidentsWindow(tk.Frame):
         )
         table_frame.grid(row=0, column=1, sticky="nsew", padx=(10, 0))
         
-
+        # Table title
         title_frame = tk.Frame(table_frame, bg=self.COLORS['header_bg'])
         title_frame.pack(fill='x', pady=(0, 10))
         
@@ -367,11 +426,11 @@ class ResidentsWindow(tk.Frame):
             bg=self.COLORS['header_bg'],
             fg=self.COLORS['primary']
         )
-        title_label.pack(pady=12)
+        title_label.pack(pady=10)
         
-
+        # Search bar
         search_frame = tk.Frame(table_frame, bg=self.COLORS['card_bg'])
-        search_frame.pack(fill='x', padx=15, pady=(0, 10))
+        search_frame.pack(fill='x', padx=10, pady=(0, 10))
         
         tk.Label(
             search_frame,
@@ -387,6 +446,7 @@ class ResidentsWindow(tk.Frame):
             search_frame,
             textvariable=self.search_var,
             font=('Helvetica', 10),
+            bg='#FAFAFA',
             relief='solid',
             bd=1
         )
@@ -394,13 +454,13 @@ class ResidentsWindow(tk.Frame):
         
         # Treeview frame with scrollbar
         tree_frame = tk.Frame(table_frame)
-        tree_frame.pack(fill='both', expand=True, padx=15, pady=(0, 15))
+        tree_frame.pack(fill='both', expand=True, padx=10, pady=(0, 10))
         
-        # Create Treeview
+        # Create Treeview with proper column widths
         columns = ('ID', 'Name', 'Phone', 'Email', 'Block', 'Room', 'Status')
         self.tree = ttk.Treeview(tree_frame, columns=columns, show='headings', height=15)
         
-
+        # Define headings with proper text
         self.tree.heading('ID', text='ID')
         self.tree.heading('Name', text='Full Name')
         self.tree.heading('Phone', text='Phone')
@@ -409,21 +469,21 @@ class ResidentsWindow(tk.Frame):
         self.tree.heading('Room', text='Room No')
         self.tree.heading('Status', text='Status')
         
-     
-        self.tree.column('ID', width=50, anchor='center')
-        self.tree.column('Name', width=150)
-        self.tree.column('Phone', width=100, anchor='center')
-        self.tree.column('Email', width=180)
-        self.tree.column('Block', width=60, anchor='center')
-        self.tree.column('Room', width=70, anchor='center')
-        self.tree.column('Status', width=80, anchor='center')
+        # Define column widths - wider to prevent overlapping
+        self.tree.column('ID', width=50, anchor='center', minwidth=40)
+        self.tree.column('Name', width=180, minwidth=120)
+        self.tree.column('Phone', width=120, anchor='center', minwidth=90)
+        self.tree.column('Email', width=200, minwidth=150)
+        self.tree.column('Block', width=70, anchor='center', minwidth=50)
+        self.tree.column('Room', width=80, anchor='center', minwidth=60)
+        self.tree.column('Status', width=100, anchor='center', minwidth=80)
         
+        # Add scrollbars
         v_scrollbar = ttk.Scrollbar(tree_frame, orient='vertical', command=self.tree.yview)
         h_scrollbar = ttk.Scrollbar(tree_frame, orient='horizontal', command=self.tree.xview)
         self.tree.configure(yscrollcommand=v_scrollbar.set, xscrollcommand=h_scrollbar.set)
         
-
-
+        # Grid layout
         self.tree.grid(row=0, column=0, sticky='nsew')
         v_scrollbar.grid(row=0, column=1, sticky='ns')
         h_scrollbar.grid(row=1, column=0, sticky='ew')
@@ -431,10 +491,12 @@ class ResidentsWindow(tk.Frame):
         tree_frame.grid_rowconfigure(0, weight=1)
         tree_frame.grid_columnconfigure(0, weight=1)
         
+        # Bind selection event
         self.tree.bind('<<TreeviewSelect>>', self.on_row_select)
         
+        # Delete button at bottom
         delete_frame = tk.Frame(table_frame, bg=self.COLORS['card_bg'])
-        delete_frame.pack(fill='x', padx=15, pady=(0, 15))
+        delete_frame.pack(fill='x', padx=10, pady=(0, 10))
         
         self.delete_btn = tk.Button(
             delete_frame,
@@ -454,8 +516,7 @@ class ResidentsWindow(tk.Frame):
         self.delete_btn.pack(fill='x')
         
     def load_residents(self, search_term=None):
-        """
-        Loads all residents from database into treeview."""
+        """Loads all residents from database into treeview."""
         # Clear existing items
         for item in self.tree.get_children():
             self.tree.delete(item)
@@ -483,8 +544,7 @@ class ResidentsWindow(tk.Frame):
             rows = cursor.fetchall()
             
             for row in rows:
-                status_text = "Active" if row['is_active'] == 1 else "Inactive"
-                status_color = "✅" if row['is_active'] == 1 else "❌"
+                status_text = "✅ Active" if row['is_active'] == 1 else "❌ Inactive"
                 
                 self.tree.insert('', 'end', values=(
                     row['resident_id'],
@@ -493,7 +553,7 @@ class ResidentsWindow(tk.Frame):
                     row['email'],
                     row['block_name'],
                     row['room_number'],
-                    f"{status_color} {status_text}"
+                    status_text
                 ))
             
             # Update stats
@@ -512,14 +572,15 @@ class ResidentsWindow(tk.Frame):
         
     def add_resident(self):
         """Adds a new resident to the database."""
-        # Validate required fields
-        first_name = self.form_vars['first_name'].get().strip()
-        last_name = self.form_vars['last_name'].get().strip()
-        phone = self.form_vars['phone'].get().strip()
-        email = self.form_vars['email'].get().strip()
-        block = self.form_vars['block_name'].get().strip().upper()
-        room = self.form_vars['room_number'].get().strip()
+        # Get form values
+        first_name = self.first_name_var.get().strip()
+        last_name = self.last_name_var.get().strip()
+        phone = self.phone_var.get().strip()
+        email = self.email_var.get().strip()
+        block = self.block_var.get().strip().upper()
+        room = self.room_var.get().strip()
         
+        # Validate required fields
         if not all([first_name, last_name, phone, email, block, room]):
             show_error("Please fill in all required fields (*)")
             return
@@ -532,6 +593,7 @@ class ResidentsWindow(tk.Frame):
             show_error("Please enter a valid email address")
             return
             
+        # Check if email already exists
         if self.email_exists(email):
             show_error("A resident with this email already exists")
             return
@@ -564,14 +626,15 @@ class ResidentsWindow(tk.Frame):
             show_error("Please select a resident to update")
             return
             
-        # Validate required fields
-        first_name = self.form_vars['first_name'].get().strip()
-        last_name = self.form_vars['last_name'].get().strip()
-        phone = self.form_vars['phone'].get().strip()
-        email = self.form_vars['email'].get().strip()
-        block = self.form_vars['block_name'].get().strip().upper()
-        room = self.form_vars['room_number'].get().strip()
+        # Get form values
+        first_name = self.first_name_var.get().strip()
+        last_name = self.last_name_var.get().strip()
+        phone = self.phone_var.get().strip()
+        email = self.email_var.get().strip()
+        block = self.block_var.get().strip().upper()
+        room = self.room_var.get().strip()
         
+        # Validate required fields
         if not all([first_name, last_name, phone, email, block, room]):
             show_error("Please fill in all required fields (*)")
             return
@@ -646,17 +709,18 @@ class ResidentsWindow(tk.Frame):
         if values:
             self.current_resident_id = safe_int(values[0])
             
+            # Split full name into first and last
             full_name = values[1].split(' ', 1)
             first_name = full_name[0]
             last_name = full_name[1] if len(full_name) > 1 else ""
             
             # Populate form fields
-            self.form_vars['first_name'].set(first_name)
-            self.form_vars['last_name'].set(last_name)
-            self.form_vars['phone'].set(values[2])
-            self.form_vars['email'].set(values[3])
-            self.form_vars['block_name'].set(values[4])
-            self.form_vars['room_number'].set(values[5])
+            self.first_name_var.set(first_name)
+            self.last_name_var.set(last_name)
+            self.phone_var.set(values[2])
+            self.email_var.set(values[3])
+            self.block_var.set(values[4])
+            self.room_var.set(values[5])
             
             # Set status
             status_text = values[6]
@@ -670,8 +734,12 @@ class ResidentsWindow(tk.Frame):
             
     def clear_form(self):
         """Clears all form fields and resets button states."""
-        for var in self.form_vars.values():
-            var.set("")
+        self.first_name_var.set("")
+        self.last_name_var.set("")
+        self.phone_var.set("")
+        self.email_var.set("")
+        self.block_var.set("")
+        self.room_var.set("")
         self.status_var.set("active")
         self.current_resident_id = None
         

@@ -2,8 +2,8 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import datetime
 
-from auth import get_current_user, is_admin, is_resident, is_staff, logout_user, get_user_display_name
-from helpers import format_date, center_window, show_confirm
+from utils.auth import get_current_user, is_admin, is_resident, is_staff, logout_user, get_user_display_name
+from utils.helpers import format_date, center_window, show_confirm
 
 
 class DashboardWindow(tk.Frame):

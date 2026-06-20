@@ -1,8 +1,8 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 
-from database import get_connection, close_connection
-from helpers import (
+from database.database import get_connection, close_connection
+from utils.helpers import (
     show_error, show_success, show_confirm, center_window,
     format_currency, safe_float, safe_int
 )

@@ -1,10 +1,17 @@
+"""
+TeddyShine Laundry Management System - Orders Window Module
+Color Theme: Light Greenish-Gray (#E8F0E6 background style)
+Module: orders_window.py
+Purpose: Place new orders and view/manage existing orders
+"""
+
 import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import datetime, timedelta
 
-from database import get_connection, close_connection
-from auth import is_admin, get_current_user
-from helpers import (
+from database.database import get_connection, close_connection
+from utils.auth import is_admin, get_current_user
+from utils.helpers import (
     show_error, show_success, show_confirm, center_window,
     format_date, format_currency, safe_int, safe_float
 )
@@ -35,7 +42,6 @@ class OrdersWindow(tk.Frame):
     ORDER_STATUSES = ['Pending', 'Processing', 'Completed', 'Cancelled', 'Delivered']
     
     def __init__(self, parent, go_back_callback):
-
         super().__init__(parent, bg=self.COLORS['bg'])
         self.parent = parent
         self.go_back_callback = go_back_callback
@@ -51,6 +57,7 @@ class OrdersWindow(tk.Frame):
         self.create_header()
         self.create_main_content()
         
+        # Load data
         self.load_residents()
         self.load_staff()
         self.load_delivery_slots()
@@ -142,7 +149,6 @@ class OrdersWindow(tk.Frame):
         
     def create_new_order_tab(self):
         """Creates the New Order form tab."""
-
         main_frame = tk.Frame(self.new_order_frame, bg=self.COLORS['bg'])
         main_frame.pack(fill='both', expand=True, padx=20, pady=20)
         
@@ -418,7 +424,6 @@ class OrdersWindow(tk.Frame):
         
     def create_view_orders_tab(self):
         """Creates the View Orders tab with filtering and management."""
-        
         main_frame = tk.Frame(self.view_orders_frame, bg=self.COLORS['bg'])
         main_frame.pack(fill='both', expand=True, padx=20, pady=20)
         
@@ -462,7 +467,6 @@ class OrdersWindow(tk.Frame):
         tree_frame = tk.Frame(main_frame)
         tree_frame.pack(fill='both', expand=True)
         
-        
         columns = ('Order ID', 'Order No', 'Resident', 'Date', 'Delivery Date', 'Amount', 'Status')
         self.orders_tree = ttk.Treeview(tree_frame, columns=columns, show='headings', height=15)
         
@@ -489,7 +493,6 @@ class OrdersWindow(tk.Frame):
         h_scrollbar = ttk.Scrollbar(tree_frame, orient='horizontal', command=self.orders_tree.xview)
         self.orders_tree.configure(yscrollcommand=v_scrollbar.set, xscrollcommand=h_scrollbar.set)
         
-
         self.orders_tree.grid(row=0, column=0, sticky='nsew')
         v_scrollbar.grid(row=0, column=1, sticky='ns')
         h_scrollbar.grid(row=1, column=0, sticky='ew')
@@ -497,7 +500,6 @@ class OrdersWindow(tk.Frame):
         tree_frame.grid_rowconfigure(0, weight=1)
         tree_frame.grid_columnconfigure(0, weight=1)
         
-
         action_frame = tk.Frame(main_frame, bg=self.COLORS['bg'])
         action_frame.pack(fill='x', pady=(15, 0))
         
@@ -532,3 +534,440 @@ class OrdersWindow(tk.Frame):
             command=self.delete_order
         )
         self.delete_order_btn.pack(side='left', padx=5)
+        
+    # ==============================================
+    # DATA LOADING FUNCTIONS
+    # ==============================================
+    
+    def load_residents(self):
+        """Loads residents into the combobox."""
+        conn = get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT resident_id, full_name, block_name, room_number
+                FROM Resident WHERE is_active = 1 ORDER BY full_name
+            """)
+            residents = cursor.fetchall()
+            
+            self.resident_list = []
+            for r in residents:
+                display_text = f"{r['full_name']} - {r['block_name']}{r['room_number']}"
+                self.resident_list.append({
+                    'id': r['resident_id'],
+                    'display': display_text
+                })
+            
+            self.resident_combo['values'] = [r['display'] for r in self.resident_list]
+            
+        except Exception as e:
+            print(f"[OrdersWindow] Error loading residents: {e}")
+        finally:
+            close_connection(conn)
+            
+    def load_staff(self):
+        """Loads staff members into the combobox."""
+        conn = get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT staff_id, full_name, role
+                FROM Staff WHERE is_available = 1
+                ORDER BY full_name
+            """)
+            staff = cursor.fetchall()
+            
+            self.staff_list = []
+            for s in staff:
+                display_text = f"{s['full_name']} ({s['role']})"
+                self.staff_list.append({
+                    'id': s['staff_id'],
+                    'display': display_text
+                })
+            
+            self.staff_combo['values'] = ['None'] + [s['display'] for s in self.staff_list]
+            self.staff_combo.set('None')
+            
+        except Exception as e:
+            print(f"[OrdersWindow] Error loading staff: {e}")
+        finally:
+            close_connection(conn)
+            
+    def load_delivery_slots(self):
+        """Loads available delivery slots into the combobox."""
+        conn = get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT slot_id, slot_date, slot_time, booked_orders, max_orders
+                FROM DeliverySlots WHERE is_available = 1
+                ORDER BY slot_date, slot_time
+            """)
+            slots = cursor.fetchall()
+            
+            self.slot_list = []
+            for s in slots:
+                available = s['max_orders'] - s['booked_orders']
+                display_text = f"{s['slot_date']} {s['slot_time']} ({available} slots left)"
+                self.slot_list.append({
+                    'id': s['slot_id'],
+                    'display': display_text
+                })
+            
+            self.slot_combo['values'] = [s['display'] for s in self.slot_list]
+            
+        except Exception as e:
+            print(f"[OrdersWindow] Error loading slots: {e}")
+        finally:
+            close_connection(conn)
+            
+    def load_services(self):
+        """Loads services into the combobox."""
+        conn = get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT service_id, service_name, base_price, price_per_kg
+                FROM Services WHERE is_active = 1
+                ORDER BY service_name
+            """)
+            services = cursor.fetchall()
+            
+            self.service_list = []
+            for s in services:
+                price = s['price_per_kg'] if s['price_per_kg'] else s['base_price']
+                display_text = f"{s['service_name']} - ₹{price}"
+                self.service_list.append({
+                    'id': s['service_id'],
+                    'name': s['service_name'],
+                    'price': price,
+                    'display': display_text
+                })
+            
+            self.service_combo['values'] = [s['display'] for s in self.service_list]
+            
+        except Exception as e:
+            print(f"[OrdersWindow] Error loading services: {e}")
+        finally:
+            close_connection(conn)
+            
+    def load_orders(self):
+        """Loads orders into the treeview with optional status filter."""
+        # Clear existing items
+        for item in self.orders_tree.get_children():
+            self.orders_tree.delete(item)
+        
+        filter_status = self.status_filter.get()
+        
+        conn = get_connection()
+        try:
+            cursor = conn.cursor()
+            
+            if filter_status != 'All':
+                query = """
+                    SELECT o.order_id, o.order_number, r.full_name, o.order_date,
+                           o.expected_delivery_date, o.final_amount, o.status
+                    FROM Orders o
+                    JOIN Resident r ON o.resident_id = r.resident_id
+                    WHERE o.status = ?
+                    ORDER BY o.order_id DESC
+                """
+                cursor.execute(query, (filter_status,))
+            else:
+                query = """
+                    SELECT o.order_id, o.order_number, r.full_name, o.order_date,
+                           o.expected_delivery_date, o.final_amount, o.status
+                    FROM Orders o
+                    JOIN Resident r ON o.resident_id = r.resident_id
+                    ORDER BY o.order_id DESC
+                """
+                cursor.execute(query)
+            
+            rows = cursor.fetchall()
+            
+            # Status emoji mapping
+            status_emoji = {
+                'Pending': '⏳ Pending',
+                'Processing': '⚙️ Processing',
+                'Completed': '✅ Completed',
+                'Cancelled': '❌ Cancelled',
+                'Delivered': '🚚 Delivered'
+            }
+            
+            for row in rows:
+                self.orders_tree.insert('', 'end', values=(
+                    row['order_id'],
+                    row['order_number'],
+                    row['full_name'],
+                    format_date(row['order_date']),
+                    format_date(row['expected_delivery_date']),
+                    format_currency(row['final_amount']),
+                    status_emoji.get(row['status'], row['status'])
+                ))
+            
+            # Update stats
+            self.stats_label.config(text=f"Total Orders: {len(rows)}")
+            
+        except Exception as e:
+            print(f"[OrdersWindow] Error loading orders: {e}")
+        finally:
+            close_connection(conn)
+            
+    # ==============================================
+    # ORDER ITEMS MANAGEMENT
+    # ==============================================
+    
+    def add_item_to_list(self):
+        """Adds a selected service with quantity to the order items list."""
+        selection = self.service_combo.current()
+        if selection < 0:
+            show_error("Please select a service")
+            return
+            
+        try:
+            quantity = int(self.qty_spinbox.get())
+            if quantity <= 0:
+                show_error("Quantity must be greater than 0")
+                return
+        except ValueError:
+            show_error("Please enter a valid quantity")
+            return
+            
+        service = self.service_list[selection]
+        subtotal = service['price'] * quantity
+        
+        item = {
+            'service_id': service['id'],
+            'service_name': service['name'],
+            'quantity': quantity,
+            'unit_price': service['price'],
+            'subtotal': subtotal
+        }
+        
+        self.order_items.append(item)
+        self.update_items_listbox()
+        
+        # Reset quantity spinbox
+        self.qty_spinbox.delete(0, tk.END)
+        self.qty_spinbox.insert(0, "1")
+        
+    def remove_item(self):
+        """Removes selected item from the order items list."""
+        selection = self.items_listbox.curselection()
+        if not selection:
+            show_error("Please select an item to remove")
+            return
+            
+        index = selection[0]
+        del self.order_items[index]
+        self.update_items_listbox()
+        
+    def update_items_listbox(self):
+        """Updates the listbox display and recalculates total."""
+        self.items_listbox.delete(0, tk.END)
+        self.current_total = 0.0
+        
+        for item in self.order_items:
+            display = f"{item['quantity']}x {item['service_name']} - {format_currency(item['subtotal'])}"
+            self.items_listbox.insert(tk.END, display)
+            self.current_total += item['subtotal']
+            
+        self.total_label.config(text=format_currency(self.current_total))
+        
+    # ==============================================
+    # ORDER CRUD OPERATIONS
+    # ==============================================
+    
+    def place_order(self):
+        """Places a new order with all items."""
+        # Validate required fields
+        resident_selection = self.resident_combo.current()
+        if resident_selection < 0:
+            show_error("Please select a resident")
+            return
+            
+        slot_selection = self.slot_combo.current()
+        if slot_selection < 0:
+            show_error("Please select a delivery slot")
+            return
+            
+        if len(self.order_items) == 0:
+            show_error("Please add at least one item to the order")
+            return
+            
+        # Get selected IDs
+        resident_id = self.resident_list[resident_selection]['id']
+        slot_id = self.slot_list[slot_selection]['id']
+        
+        # Get staff ID (if selected)
+        staff_id = None
+        staff_selection = self.staff_combo.current()
+        if staff_selection > 0:  # First item is 'None'
+            staff_id = self.staff_list[staff_selection - 1]['id']
+            
+        # Get weight
+        weight_text = self.weight_entry.get().strip()
+        total_weight = safe_float(weight_text) if weight_text else 0.0
+        
+        # Get special instructions
+        instructions = self.instructions_text.get("1.0", tk.END).strip()
+        
+        # Generate order number
+        order_number = f"ORD-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        
+        # Calculate totals
+        discount = 0.0  # Can be enhanced later
+        final_amount = self.current_total - discount
+        
+        conn = get_connection()
+        try:
+            cursor = conn.cursor()
+            
+            # Insert order
+            cursor.execute("""
+                INSERT INTO Orders (order_number, resident_id, staff_id, slot_id,
+                                   total_weight_kg, total_amount, discount_amount,
+                                   final_amount, status, order_date,
+                                   expected_delivery_date, special_instructions)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, date('now'), date('now', '+3 days'), ?)
+            """, (order_number, resident_id, staff_id, slot_id, total_weight,
+                  self.current_total, discount, final_amount, 'Pending', instructions))
+            
+            order_id = cursor.lastrowid
+            
+            # Insert order items
+            for item in self.order_items:
+                cursor.execute("""
+                    INSERT INTO OrderItems (order_id, service_id, quantity, unit_price, subtotal)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (order_id, item['service_id'], item['quantity'],
+                      item['unit_price'], item['subtotal']))
+                    
+            # Update delivery slot booked count
+            cursor.execute("""
+                UPDATE DeliverySlots SET booked_orders = booked_orders + 1
+                WHERE slot_id = ?
+            """, (slot_id,))
+            
+            # Create invoice record
+            invoice_number = f"INV-{order_id:06d}"
+            cursor.execute("""
+                INSERT INTO Invoice (order_id, invoice_number, subtotal, discount_amount,
+                                    total_amount, amount_paid, balance_due, status,
+                                    due_date, generated_date)
+                VALUES (?, ?, ?, ?, ?, 0, ?, 'Unpaid', date('now', '+7 days'), datetime('now'))
+            """, (order_id, invoice_number, self.current_total, discount,
+                  final_amount, final_amount))
+            
+            conn.commit()
+            
+            show_success(f"Order {order_number} placed successfully!\nTotal: {format_currency(final_amount)}")
+            
+            # Reset form
+            self.reset_new_order_form()
+            
+            # Refresh orders list
+            self.load_orders()
+            
+            # Switch to view orders tab
+            self.notebook.select(1)
+            
+        except Exception as e:
+            print(f"[OrdersWindow] Error placing order: {e}")
+            show_error(f"Failed to place order: {str(e)}")
+            conn.rollback()
+        finally:
+            close_connection(conn)
+            
+    def reset_new_order_form(self):
+        """Resets the new order form."""
+        self.resident_combo.set('')
+        self.staff_combo.set('None')
+        self.slot_combo.set('')
+        self.weight_entry.delete(0, tk.END)
+        self.instructions_text.delete("1.0", tk.END)
+        self.order_items = []
+        self.update_items_listbox()
+        
+    def mark_complete(self):
+        """Marks the selected order as completed."""
+        selected = self.orders_tree.selection()
+        if not selected:
+            show_error("Please select an order to mark as completed")
+            return
+            
+        values = self.orders_tree.item(selected[0], 'values')
+        if not values:
+            return
+            
+        order_id = values[0]
+        order_no = values[1]
+        current_status = values[6].replace('✅ ', '').replace('⏳ ', '').replace('⚙️ ', '').replace('❌ ', '').replace('🚚 ', '')
+        
+        if current_status == 'Completed':
+            show_error("Order is already completed")
+            return
+            
+        if current_status == 'Cancelled':
+            show_error("Cannot complete a cancelled order")
+            return
+            
+        if show_confirm(f"Mark order {order_no} as completed?"):
+            conn = get_connection()
+            try:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    UPDATE Orders SET status = 'Completed', actual_delivery_date = date('now')
+                    WHERE order_id = ?
+                """, (order_id,))
+                conn.commit()
+                
+                show_success(f"Order {order_no} marked as completed!")
+                self.load_orders()
+                
+            except Exception as e:
+                print(f"[OrdersWindow] Error marking complete: {e}")
+                show_error(f"Failed to update order: {str(e)}")
+            finally:
+                close_connection(conn)
+                
+    def delete_order(self):
+        """Deletes the selected order after confirmation."""
+        selected = self.orders_tree.selection()
+        if not selected:
+            show_error("Please select an order to delete")
+            return
+            
+        values = self.orders_tree.item(selected[0], 'values')
+        if not values:
+            return
+            
+        order_id = values[0]
+        order_no = values[1]
+        
+        if show_confirm(f"Are you sure you want to delete order {order_no}?\nThis action cannot be undone."):
+            conn = get_connection()
+            try:
+                cursor = conn.cursor()
+                
+                # Get slot_id to update booked count
+                cursor.execute("SELECT slot_id FROM Orders WHERE order_id = ?", (order_id,))
+                result = cursor.fetchone()
+                if result and result['slot_id']:
+                    cursor.execute("""
+                        UPDATE DeliverySlots SET booked_orders = booked_orders - 1
+                        WHERE slot_id = ?
+                    """, (result['slot_id'],))
+                
+                # Delete order (cascade will handle OrderItems, Invoice, Payments)
+                cursor.execute("DELETE FROM Orders WHERE order_id = ?", (order_id,))
+                conn.commit()
+                
+                show_success(f"Order {order_no} deleted successfully!")
+                self.load_orders()
+                
+            except Exception as e:
+                print(f"[OrdersWindow] Error deleting order: {e}")
+                show_error(f"Failed to delete order: {str(e)}")
+            finally:
+                close_connection(conn)

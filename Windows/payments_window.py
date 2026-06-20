@@ -1,10 +1,17 @@
+"""
+TeddyShine Laundry Management System - Payments Window Module
+Color Theme: Light Greenish-Gray (#E8F0E6 background style)
+Module: payments_window.py
+Purpose: Record payments against invoices and view payment history
+"""
+
 import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import datetime
 
-from database import get_connection, close_connection
-from auth import get_current_user
-from helpers import (
+from database.database import get_connection, close_connection
+from utils.auth import get_current_user
+from utils.helpers import (
     show_error, show_success, show_confirm, center_window,
     format_date, format_datetime, format_currency, safe_float, safe_int,
     get_current_date, get_current_datetime
@@ -12,7 +19,12 @@ from helpers import (
 
 
 class PaymentsWindow(tk.Frame):
+    """
+    Payments Window - Record payments against invoices and view payment history.
+    Provides tabs for Payment Recording and Payment History.
+    """
     
+    # Modern color theme
     COLORS = {
         'bg': '#E8F0E6',
         'card_bg': '#FFFFFF',
@@ -496,8 +508,20 @@ class PaymentsWindow(tk.Frame):
         tree_frame = tk.Frame(main_frame)
         tree_frame.pack(fill='both', expand=True)
         
+        # Configure Treeview style with row height
+        style = ttk.Style()
+        style.configure("Treeview", rowheight=30, font=('Helvetica', 10))
+        style.configure("Treeview.Heading", font=('Helvetica', 10, 'bold'))
+        
         columns = ('ID', 'Invoice No', 'Resident', 'Date', 'Amount', 'Method', 'Transaction ID', 'Status')
-        self.payment_tree = ttk.Treeview(tree_frame, columns=columns, show='headings', height=14)
+        
+        # FIX: Removed rowheight parameter - using style instead
+        self.payment_tree = ttk.Treeview(
+            tree_frame, 
+            columns=columns, 
+            show='headings', 
+            height=14
+        )
         
         self.payment_tree.heading('ID', text='ID')
         self.payment_tree.heading('Invoice No', text='Invoice No')
@@ -508,13 +532,14 @@ class PaymentsWindow(tk.Frame):
         self.payment_tree.heading('Transaction ID', text='Transaction ID')
         self.payment_tree.heading('Status', text='Status')
         
+        # Updated column widths for better display
         self.payment_tree.column('ID', width=50, anchor='center')
-        self.payment_tree.column('Invoice No', width=100, anchor='center')
-        self.payment_tree.column('Resident', width=150)
+        self.payment_tree.column('Invoice No', width=120, anchor='center')
+        self.payment_tree.column('Resident', width=180)
         self.payment_tree.column('Date', width=100, anchor='center')
         self.payment_tree.column('Amount', width=100, anchor='center')
         self.payment_tree.column('Method', width=100, anchor='center')
-        self.payment_tree.column('Transaction ID', width=120, anchor='center')
+        self.payment_tree.column('Transaction ID', width=150, anchor='center')
         self.payment_tree.column('Status', width=100, anchor='center')
         
         self.payment_tree.tag_configure('Cash', background=self.COLORS['cash_bg'])

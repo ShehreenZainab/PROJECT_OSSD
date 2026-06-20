@@ -1,0 +1,29 @@
+{
+  "colors": {
+    "bg": "#E8F0E6",
+    "card_bg": "#FFFFFF",
+    "primary": "#2E7D32",
+    "primary_dark": "#1B5E20",
+    "primary_light": "#4CAF50",
+    "accent": "#81C784",
+    "text": "#1B5E20",
+    "text_secondary": "#555555",
+    "text_light": "#FFFFFF",
+    "border": "#C8E6C9",
+    "danger": "#F44336",
+    "danger_dark": "#D32F2F",
+    "warning": "#FF9800",
+    "success": "#4CAF50"
+  },
+  "window_settings": {
+    "default_width": 1024,
+    "default_height": 768,
+    "resizable_x": true,
+    "resizable_y": true
+  },
+  "formats": {
+    "date_format": "%Y-%m-%d",
+    "currency_symbol": "Rs. ",
+    "phone_regex": "^\\+?[0-9]{10,13}$"
+  }
+}

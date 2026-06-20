@@ -1,0 +1,34 @@
+{
+  "roles": [
+    {
+      "id": 1,
+      "name": "Admin",
+      "permissions": ["all"]
+    },
+    {
+      "id": 2,
+      "name": "Staff",
+      "permissions": ["view_orders", "update_orders", "view_residents"]
+    }
+  ],
+  "default_users": [
+    {
+      "username": "admin",
+      "email": "admin@teddyshine.com",
+      "role": "Admin",
+      "status": "active"
+    }
+  ],
+  "services": [
+    {
+      "name": "Wash & Fold",
+      "price_per_kg": 150.0,
+      "estimated_days": 2
+    },
+    {
+      "name": "Dry Cleaning",
+      "price_per_item": 250.0,
+      "estimated_days": 3
+    }
+  ]
+}

@@ -15,24 +15,24 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # Import database initialization modules
-from database import get_connection, close_connection
-from schema import create_tables
-from seed_data import seed_all
+from database.database import get_connection, close_connection
+from database.schema import create_tables
+from database.seed_data import seed_all
 
 # Import all window classes
-from login_window import LoginWindow
-from dashboard_window import DashboardWindow
-from residents_window import ResidentsWindow
-from orders_window import OrdersWindow
-from services_window import ServicesWindow
-from staff_window import StaffWindow
-from tracking_window import TrackingWindow
-from invoice_window import InvoiceWindow
-from payments_window import PaymentsWindow
-from reports_window import ReportsWindow
+from Windows.login_window import LoginWindow
+from Windows.dashboard_window import DashboardWindow
+from Windows.residents_window import ResidentsWindow
+from Windows.orders_window import OrdersWindow
+from Windows.services_window import ServicesWindow
+from Windows.staff_window import StaffWindow
+from Windows.tracking_window import TrackingWindow
+from Windows.invoice_window import InvoiceWindow
+from Windows.payments_window import PaymentsWindow
+from Windows.reports_window import ReportsWindow
 
 # Import helpers
-from helpers import center_window, show_error, show_success
+from utils.helpers import center_window, show_error, show_success
 
 
 class App(tk.Tk):

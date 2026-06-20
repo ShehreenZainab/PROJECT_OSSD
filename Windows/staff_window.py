@@ -2,14 +2,14 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import datetime
 
-from database import get_connection, close_connection
-from auth import is_admin, get_current_user
-from helpers import (
+from database.database import get_connection, close_connection
+from utils.auth import is_admin, get_current_user
+from utils.helpers import (
     show_error, show_success, show_confirm, center_window,
     validate_email, validate_phone, safe_int, safe_float, format_date  # Fixed: Added safe_float
 )
-from schema import create_tables
-from seed_data import seed_all
+from database.schema import create_tables
+from database.seed_data import seed_all
 
 
 class StaffWindow(tk.Frame):

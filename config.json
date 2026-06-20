@@ -1,0 +1,17 @@
+{
+  "environment": "development",
+  "app": {
+    "name": "TeddyShine Laundry Management System",
+    "version": "1.0.0",
+    "debug": true
+  },
+  "database": {
+    "file_path": "database/database.py",
+    "schema_path": "database/schema.py"
+  },
+  "paths": {
+    "logo": "logo.png",
+    "utils_dir": "utils/",
+    "windows_dir": "Windows/"
+  }
+}
